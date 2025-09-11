@@ -1,0 +1,74 @@
+/* ===== FlexTable – FINAL CSS ===== */
+
+:root {
+    --ft-border: #e2e2e2;
+    --ft-header-bg: #f7f7f7;
+    --ft-header-text: #222;
+    --ft-row-hover: #fafafa;
+    --ft-font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Helvetica Neue", "Apple Color Emoji", "Segoe UI Emoji";
+  }
+  
+  /* Base */
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: var(--ft-font); color: #111; }
+  
+  /* Toolbar */
+  .ft-toolbar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 10px; border-bottom: 1px solid var(--ft-border); background: #fff;
+  }
+  .ft-title { font-weight: 600; font-size: 14px; }
+  .ft-spacer { flex: 1; }
+  .ft-btn { appearance: none; font: inherit; padding: 6px 10px; border: 1px solid var(--ft-border); background: #fff; border-radius: 6px; cursor: pointer; }
+  .ft-btn:hover { background: #f3f3f3; }
+  
+  /* Container */
+  .ft-container { width: 100%; height: calc(100vh - 50px); overflow: auto; }
+  
+  /* Table */
+  .flextable {
+    border-collapse: collapse; width: 100%; font-size: 13px; table-layout: auto;
+    /* Default fallback for the filter-row sticky offset — JS will set this precisely */
+    --ft-filter-top: 24px;
+  }
+  .flextable th, .flextable td {
+    border: 1px solid var(--ft-border); padding: 6px 8px; white-space: nowrap; vertical-align: middle;
+  }
+  
+  /* Main header (row 1) */
+  .flextable thead th {
+    position: sticky; top: 0; background: var(--ft-header-bg); color: var(--ft-header-text);
+    z-index: 2; font-weight: 600; cursor: pointer; user-select: none;
+  }
+  /* Keep explicit for clarity */
+  .flextable thead tr:first-child th { z-index: 2; }
+  
+  /* Filter row (row 2) — sits ABOVE the main header and is clickable */
+  .flextable thead tr:nth-child(2) th {
+    position: sticky;
+    top: var(--ft-filter-top, 24px) !important;  /* override any inline top */
+    background: #fff;
+    z-index: 3 !important;                      /* above header */
+    cursor: default;                             /* no sort cursor */
+  }
+  /* Ensure controls are always clickable */
+  .flextable thead tr:nth-child(2) th .ft-filter-input,
+  .flextable thead tr:nth-child(2) th .ft-filter-op {
+    position: relative; z-index: 4; pointer-events: auto;
+  }
+  
+  /* Body */
+  .flextable tbody tr:hover { background: var(--ft-row-hover); }
+  
+  /* Sort indicators */
+  .ft-sort-asc::after { content: " ▲"; font-size: 11px; }
+  .ft-sort-desc::after { content: " ▼"; font-size: 11px; }
+  
+  /* Filter controls */
+  .ft-filter-input { width: 100%; font-size: 12px; padding: 2px 4px; box-sizing: border-box; }
+  .ft-filter-op { font-size: 12px; padding: 2px 4px; }
+  
+  /* Row number column */
+  th.ft-rownum, td.ft-rownum { width: 56px; min-width: 48px; text-align: right; }
+  .flextable thead th.ft-rownum { cursor: default; pointer-events: none; } /* not sortable/clickable */
+  

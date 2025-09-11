@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>FlexTable</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <link rel="stylesheet" href="flextable.css" />
+
+  <!-- Only your app. The Extensions API is injected dynamically (local-first). -->
+  <script type="module" src="src/main.js"></script>
+</head>
+<body>
+  <div class="ft-toolbar">
+    <div class="ft-title" id="ft-title">FlexTable</div>
+    <div class="ft-spacer"></div>
+    <button id="export-btn" class="ft-btn">Export CSV</button>
+  </div>
+
+  <div id="flextable-container" class="ft-container" aria-live="polite"></div>
+</body>
+</html>

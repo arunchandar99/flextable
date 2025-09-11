@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest manifest-version="1.0"
+          xmlns="http://www.tableau.com/xml/extension_manifest">
+
+  <worksheet-extension id="com.arun.flextable"
+                       extension-version="0.1.0">
+
+    <default-locale>en_US</default-locale>
+    <name>FlexTable</name>
+    <description>
+      A flexible Excel-like table for Tableau (Phase 1: render summary data, click-to-sort, CSV export).
+    </description>
+
+    <author name="Arun Chander"
+            email="your.email@example.com"
+            website="https://github.com/yourusername/flextable"/>
+
+    <min-api-version>1.13</min-api-version>
+
+    <source-location>
+      <url>http://localhost:8080/flextable.html</url>
+    </source-location>
+
+    <icon/>
+
+    <permissions>
+      <permission>full data</permission>
+    </permissions>
+
+  </worksheet-extension>
+</manifest>
