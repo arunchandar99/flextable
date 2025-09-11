@@ -71,22 +71,25 @@ import { initAggregateByVisibleDims } from "./ui/aggregate-by-visible-dims-dom.j
      if (exportBtn) exportBtn.addEventListener("click", exportCSVFromDOM);
    }
    
-   // Phase 2 feature initialization
+   // Phase 2 feature initialization with proper sequencing
    function initializePhase2Features() {
      try {
-       // Initialize row numbers first (creates the # column)
+       // Step 1: Initialize row numbers first (creates # column and sets CSS variables)
        initRowNumbers();
        
-       // Initialize column filtering (creates filter row)
-       mountDomFilters();
+       // Step 2: Small delay to let DOM settle before adding filters
+       setTimeout(() => {
+         // Initialize column filtering (creates filter row)
+         mountDomFilters();
+         
+         // Step 3: Initialize other features after DOM is stable
+         setTimeout(() => {
+           initColumnsMenu();
+           initAggregateByVisibleDims();
+         }, 50);
+       }, 100);
        
-       // Initialize column visibility menu
-       initColumnsMenu();
-       
-       // Initialize data aggregation
-       initAggregateByVisibleDims();
-       
-       log("Phase 2 features initialized successfully.");
+       log("Phase 2 features initialization started.");
      } catch (err) {
        log("Phase 2 feature initialization failed:", err);
      }
@@ -119,20 +122,25 @@ import { initAggregateByVisibleDims } from "./ui/aggregate-by-visible-dims-dom.j
      };
    }
    
-   // DOM change observer for automatic feature re-mounting
+   // DOM change observer for automatic feature re-mounting (reduced frequency)
    function observeDOMChanges() {
      const container = document.getElementById("flextable-container") || document.body;
      const observer = new MutationObserver(() => {
        clearTimeout(observer._debounceTimer);
        observer._debounceTimer = setTimeout(() => {
          try { 
-           mountDomFilters(); 
+           // Only re-mount if the table structure actually changed
+           const table = document.querySelector(".flextable");
+           const hasFilters = table && table.querySelector("thead tr:nth-child(2)");
+           if (table && !hasFilters) {
+             mountDomFilters(); 
+           }
          } catch (e) { 
            log("Auto-remount filters failed:", e); 
          }
-       }, 100);
+       }, 300); // Increased delay to reduce frequency
      });
-     observer.observe(container, { childList: true, subtree: true });
+     observer.observe(container, { childList: true, subtree: false }); // Less intrusive watching
    }
    
    // Initialize on DOM ready

@@ -59,9 +59,14 @@ export function mountDomFilters() {
 }
 
 function updateStickyOffset(table, headerRow) {
+  // Only update if not already set, to prevent jitter
   if (!table.style.getPropertyValue("--ft-filter-top")) {
-    const height = headerRow.offsetHeight;
-    table.style.setProperty("--ft-filter-top", `${height}px`);
+    // Use requestAnimationFrame to ensure DOM is settled
+    requestAnimationFrame(() => {
+      const height = headerRow.offsetHeight || 35;
+      table.style.setProperty("--ft-filter-top", `${height}px`);
+      console.log(`[FlexTable] Set filter offset to ${height}px`);
+    });
   }
 }
 
@@ -77,6 +82,11 @@ function createFilterRow(headerRow, columnTypes, rowNumIdx) {
   filterRow.className = "ft-filter-row";
   
   for (let i = 0; i < headerRow.cells.length; i++) {
+    // The filter column index should match the body column index
+    // If row numbers exist at position 0, then:
+    // - Header position 0 = row number (no filter)  
+    // - Header position 1 = data column 0 (filter index 0)
+    // - Header position 2 = data column 1 (filter index 1)
     const th = createFilterCell(headerRow.cells[i], i, columnTypes[i], rowNumIdx);
     filterRow.appendChild(th);
   }
@@ -84,26 +94,20 @@ function createFilterRow(headerRow, columnTypes, rowNumIdx) {
   return filterRow;
 }
 
-function createFilterCell(headerCell, colIndex, columnType, rowNumIdx) {
+function createFilterCell(headerCell, headerIndex, columnType, rowNumIdx) {
   const th = document.createElement("th");
   th.className = "ft-filter-cell";
   
   // Mirror visibility of header cell
   th.style.display = getComputedStyle(headerCell).display;
   
-  // Sticky positioning
-  Object.assign(th.style, {
-    position: "sticky",
-    top: "var(--ft-filter-top, 24px)",
-    background: "#fff",
-    zIndex: "3",
-    cursor: "default",
-    padding: "4px"
-  });
+  // Let CSS handle the sticky positioning to prevent conflicts
+  // Only set essential inline styles
+  th.style.padding = "4px";
 
   // Add filter control (skip row number column)
-  if (colIndex !== rowNumIdx && columnType !== "skip") {
-    const control = createFilterControl(colIndex, columnType || "text");
+  if (headerIndex !== rowNumIdx && columnType !== "skip") {
+    const control = createFilterControl(headerIndex, columnType || "text");
     if (control) th.appendChild(control);
   }
 
@@ -308,6 +312,8 @@ function applyFilters(table) {
 }
 
 function evaluateRowFilter(tr, colIndex, filter) {
+  // colIndex now directly corresponds to the header column position
+  // No adjustment needed since we use the actual header column index
   const td = tr.cells[colIndex];
   if (!td) return true;
   
