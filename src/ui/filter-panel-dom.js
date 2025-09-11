@@ -82,19 +82,16 @@ function createFilterRow(headerRow, columnTypes, rowNumIdx) {
   filterRow.className = "ft-filter-row";
   
   for (let i = 0; i < headerRow.cells.length; i++) {
-    // The filter column index should match the body column index
-    // If row numbers exist at position 0, then:
-    // - Header position 0 = row number (no filter)  
-    // - Header position 1 = data column 0 (filter index 0)
-    // - Header position 2 = data column 1 (filter index 1)
-    const th = createFilterCell(headerRow.cells[i], i, columnTypes[i], rowNumIdx);
+    // Calculate the data column index (what data column this filter controls)
+    const dataColIndex = rowNumIdx === 0 ? i - 1 : i; // If row# at 0, shift data cols
+    const th = createFilterCell(headerRow.cells[i], i, dataColIndex, columnTypes[i], rowNumIdx);
     filterRow.appendChild(th);
   }
   
   return filterRow;
 }
 
-function createFilterCell(headerCell, headerIndex, columnType, rowNumIdx) {
+function createFilterCell(headerCell, headerIndex, dataColIndex, columnType, rowNumIdx) {
   const th = document.createElement("th");
   th.className = "ft-filter-cell";
   
@@ -105,25 +102,25 @@ function createFilterCell(headerCell, headerIndex, columnType, rowNumIdx) {
   // Only set essential inline styles
   th.style.padding = "4px";
 
-  // Add filter control (skip row number column)
-  if (headerIndex !== rowNumIdx && columnType !== "skip") {
-    const control = createFilterControl(headerIndex, columnType || "text");
+  // Add filter control (skip row number column and invalid data column indices)
+  if (headerIndex !== rowNumIdx && dataColIndex >= 0 && columnType !== "skip") {
+    const control = createFilterControl(dataColIndex, headerIndex, columnType || "text");
     if (control) th.appendChild(control);
   }
 
   return th;
 }
 
-function createFilterControl(colIndex, type) {
+function createFilterControl(dataColIndex, headerIndex, type) {
   try {
     switch (type) {
-      case "number": return renderNumberFilter(colIndex);
-      case "date": return renderDateFilter(colIndex);
-      default: return renderTextFilter(colIndex);
+      case "number": return renderNumberFilter(dataColIndex, headerIndex);
+      case "date": return renderDateFilter(dataColIndex, headerIndex);  
+      default: return renderTextFilter(dataColIndex, headerIndex);
     }
   } catch (error) {
-    console.warn(`[FlexTable] Failed to create ${type} filter for column ${colIndex}:`, error);
-    return renderTextFilter(colIndex); // Fallback to text filter
+    console.warn(`[FlexTable] Failed to create ${type} filter for column ${dataColIndex}:`, error);
+    return renderTextFilter(dataColIndex, headerIndex); // Fallback to text filter
   }
 }
 
@@ -197,16 +194,16 @@ function findRowNumIndex(firstHeaderRow) {
 
 /* ------------------------------ Controls ------------------------------ */
 
-function renderTextFilter(colIndex) {
+function renderTextFilter(dataColIndex, headerIndex) {
   const wrap = rowFlex();
   const input = inputEl("text", "filter…");
-  const st = filterState.get(colIndex);
+  const st = filterState.get(dataColIndex);
   if (st && st.type === "text") input.value = st.v1 || "";
 
   input.addEventListener("input", () => {
     const v = input.value.trim();
-    if (v) filterState.set(colIndex, { type: "text", v1: v.toLowerCase() });
-    else filterState.delete(colIndex);
+    if (v) filterState.set(dataColIndex, { type: "text", v1: v.toLowerCase(), headerIndex });
+    else filterState.delete(dataColIndex);
     applyFilters(document.querySelector(".flextable"));
   });
 
@@ -214,7 +211,7 @@ function renderTextFilter(colIndex) {
   return wrap;
 }
 
-function renderNumberFilter(colIndex) {
+function renderNumberFilter(dataColIndex, headerIndex) {
   const wrap = rowFlex();
 
   const op = selectEl(["=", "!=", ">", ">=", "<", "<=", "between"]);
@@ -222,7 +219,7 @@ function renderNumberFilter(colIndex) {
   const v2 = inputEl("number", "and");
   v2.style.display = "none";
 
-  const st = filterState.get(colIndex);
+  const st = filterState.get(dataColIndex);
   if (st && st.type === "number") {
     op.value = st.op || "=";
     v1.value = st.v1 || "";
@@ -235,8 +232,8 @@ function renderNumberFilter(colIndex) {
     const a = v1.value.trim();
     const b = v2.value.trim();
     const valid = o === "between" ? (a !== "" && b !== "") : a !== "";
-    if (valid) filterState.set(colIndex, { type: "number", op: o, v1: a, v2: b });
-    else filterState.delete(colIndex);
+    if (valid) filterState.set(dataColIndex, { type: "number", op: o, v1: a, v2: b, headerIndex });
+    else filterState.delete(dataColIndex);
     applyFilters(document.querySelector(".flextable"));
   };
 
@@ -248,7 +245,7 @@ function renderNumberFilter(colIndex) {
   return wrap;
 }
 
-function renderDateFilter(colIndex) {
+function renderDateFilter(dataColIndex, headerIndex) {
   const wrap = rowFlex();
 
   const op = selectEl([["on","On"],["before","Before"],["after","After"],["between","Between"]]);
@@ -256,7 +253,7 @@ function renderDateFilter(colIndex) {
   const d2 = inputEl("date");
   d2.style.display = "none";
 
-  const st = filterState.get(colIndex);
+  const st = filterState.get(dataColIndex);
   if (st && st.type === "date") {
     op.value = st.op || "on";
     d1.value = st.v1 || "";
@@ -269,8 +266,8 @@ function renderDateFilter(colIndex) {
     const a = d1.value;
     const b = d2.value;
     const valid = o === "between" ? (a && b) : !!a;
-    if (valid) filterState.set(colIndex, { type: "date", op: o, v1: a, v2: b });
-    else filterState.delete(colIndex);
+    if (valid) filterState.set(dataColIndex, { type: "date", op: o, v1: a, v2: b, headerIndex });
+    else filterState.delete(dataColIndex);
     applyFilters(document.querySelector(".flextable"));
   };
 
@@ -311,10 +308,10 @@ function applyFilters(table) {
   updateFilterStats(visibleCount, rows.length);
 }
 
-function evaluateRowFilter(tr, colIndex, filter) {
-  // colIndex now directly corresponds to the header column position
-  // No adjustment needed since we use the actual header column index
-  const td = tr.cells[colIndex];
+function evaluateRowFilter(tr, dataColIndex, filter) {
+  // Use the stored header index to get the correct DOM column
+  const headerIndex = filter.headerIndex;
+  const td = tr.cells[headerIndex];
   if (!td) return true;
   
   const raw = td.textContent || "";
