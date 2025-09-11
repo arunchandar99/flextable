@@ -63,7 +63,14 @@ function recalcAggregationIfNeeded() {
 function enterAggregatedMode() {
   if (!aggregatedMode) {
     // First time entering: snapshot original rows from DOM
-    originalRows = readRowsFromDOM(); // includes current filters' effect (visibility flags not stored)
+    const currentRows = readRowsFromDOM();
+    if (currentRows && currentRows.length > 0) {
+      originalRows = currentRows;
+      console.log(`[FlexTable] Snapshot saved: ${originalRows.length} rows for aggregation`);
+    } else {
+      console.warn("[FlexTable] No rows found to snapshot - may cause restore issues");
+      originalRows = [];
+    }
     aggregatedMode = true;
   }
   recomputeAggregateFromCurrentDOM();
@@ -71,11 +78,23 @@ function enterAggregatedMode() {
 
 function exitAggregatedMode() {
   if (!aggregatedMode) return;
+  
+  // Check if we have valid original data to restore
+  if (!originalRows || originalRows.length === 0) {
+    console.warn("[FlexTable] No original rows to restore, requesting fresh data from Tableau");
+    // Force a complete refresh from Tableau instead of trying to restore stale data
+    aggregatedMode = false;
+    
+    // Trigger a fresh data fetch by dispatching a custom event
+    // The main extension will catch this and re-render with fresh data
+    window.dispatchEvent(new CustomEvent('flextable-refresh-needed'));
+    return;
+  }
+  
   // Restore original detail rows
-  writeRowsToDOM(originalRows || []);
+  writeRowsToDOM(originalRows);
   aggregatedMode = false;
-  // After restoring, ensure hidden columns (if any) are applied by the menu module
-  // (columns-menu already toggles display on <th>/<td> so we don't need to do anything here)
+  console.log(`[FlexTable] Restored ${originalRows.length} original rows from snapshot`);
 }
 
 function recomputeAggregateFromCurrentDOM() {

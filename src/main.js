@@ -13,6 +13,8 @@ import { log } from "./utils/logger.js";
 
 // Phase 2 imports
 import { mountDomFilters, clearDomFilters } from "./ui/filter-panel-dom.js";
+import { initColumnAlignment, reapplyColumnAlignments } from "./ui/column-alignment-dom.js";
+import { initColumnResize, reapplyColumnWidths, enableDoubleClickAutoSize } from "./ui/column-resize-dom.js";
 import { initRowNumbers } from "./ui/row-number-dom.js";
 import { initColumnsMenu } from "./ui/columns-menu-dom.js";
 import { initAggregateByVisibleDims } from "./ui/aggregate-by-visible-dims-dom.js";
@@ -47,11 +49,28 @@ import { initAggregateByVisibleDims } from "./ui/aggregate-by-visible-dims-dom.j
          renderTable(newData);
          // Re-initialize Phase 2 features after data changes
          initializePhase2Features();
+         // Re-apply customizations after table rebuild
+         setTimeout(() => {
+           reapplyColumnAlignments();
+           reapplyColumnWidths();
+         }, 50);
        });
    
        // Safety net: Re-mount features if DOM changes externally
        observeDOMChanges();
    
+       // Listen for refresh requests from aggregation module
+       window.addEventListener('flextable-refresh-needed', async () => {
+         try {
+           console.log("[FlexTable] Refreshing data from Tableau due to aggregation restore failure");
+           const freshData = await fetchData();
+           renderTable(freshData);
+           initializePhase2Features();
+         } catch (err) {
+           console.error("[FlexTable] Failed to refresh data:", err);
+         }
+       });
+
        // Expose global shortcuts for debugging
        window.FlexTable = Object.assign(window.FlexTable || {}, {
          clearFilters: () => clearDomFilters(),
@@ -71,25 +90,27 @@ import { initAggregateByVisibleDims } from "./ui/aggregate-by-visible-dims-dom.j
      if (exportBtn) exportBtn.addEventListener("click", exportCSVFromDOM);
    }
    
-   // Phase 2 feature initialization with proper sequencing
+   // Phase 2 feature initialization - clean and simple
    function initializePhase2Features() {
      try {
-       // Step 1: Initialize row numbers first (creates # column and sets CSS variables)
-       initRowNumbers();
+       // Skip row numbers for now - focus on core functionality
+       // initRowNumbers();
        
-       // Step 2: Small delay to let DOM settle before adding filters
-       setTimeout(() => {
-         // Initialize column filtering (creates filter row)
-         mountDomFilters();
-         
-         // Step 3: Initialize other features after DOM is stable
-         setTimeout(() => {
-           initColumnsMenu();
-           initAggregateByVisibleDims();
-         }, 50);
-       }, 100);
+       // Initialize column filtering 
+       mountDomFilters();
        
-       log("Phase 2 features initialization started.");
+       // Initialize column alignment controls
+       initColumnAlignment();
+       
+       // Initialize column resize handles
+       initColumnResize();
+       enableDoubleClickAutoSize();
+       
+       // Skip other features for now - keep it simple and stable
+       // initColumnsMenu();
+       // initAggregateByVisibleDims();
+       
+       log("Phase 2 features initialized successfully (filters + alignment + resize).");
      } catch (err) {
        log("Phase 2 feature initialization failed:", err);
      }
