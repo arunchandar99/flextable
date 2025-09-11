@@ -9,62 +9,118 @@
 const filterState = new Map(); // colIndex -> { type: 'text'|'number'|'date', op?, v1?, v2? }
 
 export function mountDomFilters() {
-  const table = document.querySelector(".flextable");
-  if (!(table instanceof HTMLTableElement)) return false;
-
-  const thead = table.querySelector("thead");
-  if (!(thead instanceof HTMLTableSectionElement)) return false;
-
-  const headerRow = thead.rows[0];
-  if (!headerRow) return false;
-
-  // Rebuild filter row fresh so it matches header exactly
-  if (thead.rows.length > 1) thead.deleteRow(1);
-
-  // Ensure sticky offset CSS var exists (prevents jitter)
-  if (!table.style.getPropertyValue("--ft-filter-top")) {
-    table.style.setProperty("--ft-filter-top", `${headerRow.offsetHeight}px`);
-  }
-
-  const rowNumIdx = findRowNumIndex(headerRow);          // detect "#" column
-  const types = detectColumnTypesFromDom(table, rowNumIdx);
-
-  const filterRow = document.createElement("tr");
-  const colCount = headerRow.cells.length;
-
-  // Clean stale state for removed columns (if table shape changed)
-  Array.from(filterState.keys()).forEach(k => { if (k >= colCount) filterState.delete(k); });
-
-  for (let i = 0; i < colCount; i++) {
-    const headCell = headerRow.cells[i];
-    const th = document.createElement("th");
-
-    // Mirror visibility so hidden columns’ filter cells also hide
-    th.style.display = getComputedStyle(headCell).display;
-
-    // Sticky placement right under the main header; keep it clickable
-    th.style.position = "sticky";
-    th.style.top = "var(--ft-filter-top, 24px)";
-    th.style.background = "#fff";
-    th.style.zIndex = "3"; // above the main header row
-    th.style.cursor = "default";
-
-    // Skip building a control under the row-number column
-    if (i !== rowNumIdx) {
-      const type = types[i] || "text";
-      let control;
-      if (type === "number") control = renderNumberFilter(i);
-      else if (type === "date") control = renderDateFilter(i);
-      else control = renderTextFilter(i);
-      th.appendChild(control);
+  try {
+    const table = document.querySelector(".flextable");
+    if (!(table instanceof HTMLTableElement)) {
+      console.warn("[FlexTable] No table found for filters");
+      return false;
     }
 
+    const thead = table.querySelector("thead");
+    if (!(thead instanceof HTMLTableSectionElement)) {
+      console.warn("[FlexTable] No table header found for filters");
+      return false;
+    }
+
+    const headerRow = thead.rows[0];
+    if (!headerRow) {
+      console.warn("[FlexTable] No header row found for filters");
+      return false;
+    }
+
+    // Remove existing filter row to rebuild fresh
+    if (thead.rows.length > 1) {
+      thead.deleteRow(1);
+    }
+
+    // Set sticky positioning offset (prevents visual jitter)
+    updateStickyOffset(table, headerRow);
+
+    const rowNumIdx = findRowNumIndex(headerRow);
+    const columnTypes = detectColumnTypesFromDom(table, rowNumIdx);
+    const colCount = headerRow.cells.length;
+
+    // Clean up stale filter state
+    cleanupFilterState(colCount);
+
+    // Build filter row
+    const filterRow = createFilterRow(headerRow, columnTypes, rowNumIdx);
+    
+    thead.appendChild(filterRow);
+    applyFilters(table);
+    
+    console.log("[FlexTable] Filters mounted successfully");
+    return true;
+    
+  } catch (error) {
+    console.error("[FlexTable] Failed to mount filters:", error);
+    return false;
+  }
+}
+
+function updateStickyOffset(table, headerRow) {
+  if (!table.style.getPropertyValue("--ft-filter-top")) {
+    const height = headerRow.offsetHeight;
+    table.style.setProperty("--ft-filter-top", `${height}px`);
+  }
+}
+
+function cleanupFilterState(colCount) {
+  // Remove filter state for columns that no longer exist
+  Array.from(filterState.keys()).forEach(k => {
+    if (k >= colCount) filterState.delete(k);
+  });
+}
+
+function createFilterRow(headerRow, columnTypes, rowNumIdx) {
+  const filterRow = document.createElement("tr");
+  filterRow.className = "ft-filter-row";
+  
+  for (let i = 0; i < headerRow.cells.length; i++) {
+    const th = createFilterCell(headerRow.cells[i], i, columnTypes[i], rowNumIdx);
     filterRow.appendChild(th);
   }
+  
+  return filterRow;
+}
 
-  thead.appendChild(filterRow);
-  applyFilters(table);
-  return true;
+function createFilterCell(headerCell, colIndex, columnType, rowNumIdx) {
+  const th = document.createElement("th");
+  th.className = "ft-filter-cell";
+  
+  // Mirror visibility of header cell
+  th.style.display = getComputedStyle(headerCell).display;
+  
+  // Sticky positioning
+  Object.assign(th.style, {
+    position: "sticky",
+    top: "var(--ft-filter-top, 24px)",
+    background: "#fff",
+    zIndex: "3",
+    cursor: "default",
+    padding: "4px"
+  });
+
+  // Add filter control (skip row number column)
+  if (colIndex !== rowNumIdx && columnType !== "skip") {
+    const control = createFilterControl(colIndex, columnType || "text");
+    if (control) th.appendChild(control);
+  }
+
+  return th;
+}
+
+function createFilterControl(colIndex, type) {
+  try {
+    switch (type) {
+      case "number": return renderNumberFilter(colIndex);
+      case "date": return renderDateFilter(colIndex);
+      default: return renderTextFilter(colIndex);
+    }
+  } catch (error) {
+    console.warn(`[FlexTable] Failed to create ${type} filter for column ${colIndex}:`, error);
+    return renderTextFilter(colIndex); // Fallback to text filter
+  }
 }
 
 export function clearDomFilters() {
@@ -226,62 +282,107 @@ function renderDateFilter(colIndex) {
 
 function applyFilters(table) {
   if (!(table instanceof HTMLTableElement)) return;
-  const tbody = table.tBodies[0]; if (!tbody) return;
+  const tbody = table.tBodies[0]; 
+  if (!tbody) return;
 
-  const active = Array.from(filterState.entries()); // [ [idx, {type, op, v1, v2}], ... ]
+  const active = Array.from(filterState.entries());
   const rows = Array.from(tbody.rows);
 
+  // Early exit if no filters active
   if (active.length === 0) {
     rows.forEach(tr => (tr.style.display = ""));
     return;
   }
 
+  // Track visible rows for statistics
+  let visibleCount = 0;
+
   rows.forEach(tr => {
-    const show = active.every(([idx, f]) => {
-      const td = tr.cells[idx];
-      const raw = (td ? td.textContent : "") || "";
-      const text = raw.toLowerCase();
-
-      if (f.type === "text") return text.includes((f.v1 || "").toLowerCase());
-
-      if (f.type === "number") {
-        const n = toNumber(raw); if (n === null) return false;
-        const a = toNumber(f.v1); const b = toNumber(f.v2);
-        switch (f.op) {
-          case "=":  return a !== null && n === a;
-          case "!=": return a !== null && n !== a;
-          case ">":  return a !== null && n >  a;
-          case ">=": return a !== null && n >= a;
-          case "<":  return a !== null && n <  a;
-          case "<=": return a !== null && n <= a;
-          case "between":
-            if (a === null || b === null) return false;
-            const lo = Math.min(a, b), hi = Math.max(a, b);
-            return n >= lo && n <= hi;
-          default: return true;
-        }
-      }
-
-      if (f.type === "date") {
-        const d = toDate(raw); if (!d) return false;
-        const d1 = toDate(f.v1); const d2 = toDate(f.v2);
-        switch (f.op) {
-          case "on":      return d1 && sameDay(d, d1);
-          case "before":  return !!d1 && d < d1;
-          case "after":   return !!d1 && d > d1;
-          case "between":
-            if (!d1 || !d2) return false;
-            const [lo, hi] = d1 <= d2 ? [d1, d2] : [d2, d1];
-            return d >= lo && d <= hi;
-          default: return true;
-        }
-      }
-
-      return true;
-    });
-
+    const show = active.every(([idx, filter]) => evaluateRowFilter(tr, idx, filter));
     tr.style.display = show ? "" : "none";
+    if (show) visibleCount++;
   });
+
+  // Update aggregations if they exist
+  updateFilterStats(visibleCount, rows.length);
+}
+
+function evaluateRowFilter(tr, colIndex, filter) {
+  const td = tr.cells[colIndex];
+  if (!td) return true;
+  
+  const raw = td.textContent || "";
+  
+  switch (filter.type) {
+    case "text":
+      return evaluateTextFilter(raw, filter);
+    case "number":
+      return evaluateNumberFilter(raw, filter);
+    case "date":
+      return evaluateDateFilter(raw, filter);
+    default:
+      return true;
+  }
+}
+
+function evaluateTextFilter(raw, filter) {
+  const text = raw.toLowerCase();
+  const searchTerm = (filter.v1 || "").toLowerCase();
+  return text.includes(searchTerm);
+}
+
+function evaluateNumberFilter(raw, filter) {
+  const n = toNumber(raw);
+  if (n === null) return false;
+  
+  const a = toNumber(filter.v1);
+  const b = toNumber(filter.v2);
+  
+  switch (filter.op) {
+    case "=":  return a !== null && n === a;
+    case "!=": return a !== null && n !== a;
+    case ">":  return a !== null && n > a;
+    case ">=": return a !== null && n >= a;
+    case "<":  return a !== null && n < a;
+    case "<=": return a !== null && n <= a;
+    case "between":
+      if (a === null || b === null) return false;
+      const [lo, hi] = [Math.min(a, b), Math.max(a, b)];
+      return n >= lo && n <= hi;
+    default: 
+      return true;
+  }
+}
+
+function evaluateDateFilter(raw, filter) {
+  const d = toDate(raw);
+  if (!d) return false;
+  
+  const d1 = toDate(filter.v1);
+  const d2 = toDate(filter.v2);
+  
+  switch (filter.op) {
+    case "on":
+      return d1 && sameDay(d, d1);
+    case "before":
+      return !!d1 && d < d1;
+    case "after":
+      return !!d1 && d > d1;
+    case "between":
+      if (!d1 || !d2) return false;
+      const [lo, hi] = d1 <= d2 ? [d1, d2] : [d2, d1];
+      return d >= lo && d <= hi;
+    default:
+      return true;
+  }
+}
+
+function updateFilterStats(visibleCount, totalCount) {
+  // Update filter statistics if stats element exists
+  const statsEl = document.getElementById("ft-filter-stats");
+  if (statsEl) {
+    statsEl.textContent = `Showing ${visibleCount} of ${totalCount} rows`;
+  }
 }
 
 /* ------------------------------ Helpers ------------------------------ */
