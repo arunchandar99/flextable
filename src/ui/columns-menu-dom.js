@@ -80,7 +80,12 @@ function getHeaderCells() {
   if (!(thead instanceof HTMLTableSectionElement)) return [];
   const r = thead.rows[0]; if (!r) return [];
   return Array.from(r.cells).map((th, idx) => {
-    const name = (th.textContent || "").trim();
+    // Get the raw text content and clean it of alignment arrows
+    let name = (th.textContent || "").trim();
+    
+    // Remove alignment arrows (⬅️➡️⬆️) and other indicators
+    name = name.replace(/[⬅️➡️⬆️↑↓↕⬆⬇]/g, '').trim();
+    
     const isRowNum = th.dataset?.ftRownum === "1" || th.classList.contains("ft-rownum") || name === "#";
     return { idx, name, isRowNum };
   });
@@ -143,10 +148,17 @@ export function applyVisibilityToCurrentTable() {
   const tbody = table.tBodies[0];
 
   if (thead) {
-    Array.from(thead.rows).forEach((row) => {
-      Array.from(row.cells).forEach((th, idx) => {
+    Array.from(thead.rows).forEach((row, rowIndex) => {
+      const rowType = rowIndex === 0 ? "header" : 
+                     row.classList.contains("ft-filter-row") ? "filter" : "other";
+      
+      Array.from(row.cells).forEach((cell, idx) => {
         const hidden = hiddenCols.has(idx) && idx !== rowNumIdx;
-        th.style.display = hidden ? "none" : "";
+        cell.style.display = hidden ? "none" : "";
+        
+        if (hidden) {
+          console.log(`[FlexTable] Hiding ${rowType} cell at index ${idx}`);
+        }
       });
     });
   }
@@ -158,4 +170,6 @@ export function applyVisibilityToCurrentTable() {
       });
     });
   }
+  
+  console.log(`[FlexTable] Column visibility applied: ${hiddenCols.size} columns hidden`);
 }

@@ -18,6 +18,9 @@ import { initColumnResize, reapplyColumnWidths, enableDoubleClickAutoSize } from
 import { initRowNumbers } from "./ui/row-number-dom.js";
 import { initColumnsMenu } from "./ui/columns-menu-dom.js";
 import { initAggregateByVisibleDims } from "./ui/aggregate-by-visible-dims-dom.js";
+
+// Phase 3 imports
+import { initGlobalSearch, clearGlobalSearch } from "./ui/global-search-dom.js";
    
    
    async function init() {
@@ -73,7 +76,7 @@ import { initAggregateByVisibleDims } from "./ui/aggregate-by-visible-dims-dom.j
 
        // Expose global shortcuts for debugging
        window.FlexTable = Object.assign(window.FlexTable || {}, {
-         clearFilters: () => clearDomFilters(),
+         clearFilters: () => { clearDomFilters(); clearGlobalSearch(); },
          refreshFeatures: () => initializePhase2Features()
        });
    
@@ -90,29 +93,34 @@ import { initAggregateByVisibleDims } from "./ui/aggregate-by-visible-dims-dom.j
      if (exportBtn) exportBtn.addEventListener("click", exportCSVFromDOM);
    }
    
-   // Phase 2 feature initialization - clean and simple
+   // Phase 2/3 feature initialization
    function initializePhase2Features() {
      try {
-       // Skip row numbers for now - focus on core functionality
+       // Phase 3: Global search (must be first to add to toolbar)
+       initGlobalSearch();
+       
+       // Skip row numbers - removed per user request (causes alignment issues)
        // initRowNumbers();
        
-       // Initialize column filtering 
+       // Phase 2: Column filtering 
        mountDomFilters();
        
-       // Initialize column alignment controls
+       // Phase 2: Column alignment controls
        initColumnAlignment();
        
-       // Initialize column resize handles
+       // Phase 2: Column resize handles
        initColumnResize();
        enableDoubleClickAutoSize();
        
-       // Skip other features for now - keep it simple and stable
+       // Skip column visibility control - removed per user request
        // initColumnsMenu();
+       
+       // Skip data aggregation for now - keep it simple and stable
        // initAggregateByVisibleDims();
        
-       log("Phase 2 features initialized successfully (filters + alignment + resize).");
+       log("Phase 2/3 features initialized successfully (global search + discrete filters + column filters + alignment + resize).");
      } catch (err) {
-       log("Phase 2 feature initialization failed:", err);
+       log("Phase 2/3 feature initialization failed:", err);
      }
    }
    
@@ -136,7 +144,8 @@ import { initAggregateByVisibleDims } from "./ui/aggregate-by-visible-dims-dom.j
      btn.onclick = () => {
        try { 
          clearDomFilters(); 
-         log("Filters cleared successfully.");
+         clearGlobalSearch();
+         log("All filters and search cleared successfully.");
        } catch (e) { 
          log("Clear filters failed:", e); 
        }

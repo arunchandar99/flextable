@@ -19,6 +19,10 @@ export function renderTable({ columns, rows }) {
   columns.forEach((col, idx) => {
     const th = document.createElement("th");
     th.textContent = col;
+    // Add title for hover tooltip to show full text
+    if (col.length > 20) {
+      th.title = col;
+    }
 
     th.addEventListener("click", () => {
       if (sortState.colIndex === idx) {
@@ -45,7 +49,12 @@ export function renderTable({ columns, rows }) {
     const tr = document.createElement("tr");
     row.forEach((cell) => {
       const td = document.createElement("td");
-      td.textContent = cell ?? "";
+      const cellText = cell ?? "";
+      td.textContent = cellText;
+      // Add title for hover tooltip to show full text
+      if (cellText.length > 30) {
+        td.title = cellText;
+      }
       tr.appendChild(td);
     });
     tbody.appendChild(tr);

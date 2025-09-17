@@ -22,8 +22,15 @@
   .ft-btn { appearance: none; font: inherit; padding: 6px 10px; border: 1px solid var(--ft-border); background: #fff; border-radius: 6px; cursor: pointer; }
   .ft-btn:hover { background: #f3f3f3; }
   
-  /* Container */
-  .ft-container { width: 100%; height: calc(100vh - 50px); overflow: auto; }
+  /* Container - Enable sticky positioning */
+  .ft-container { 
+    width: 100%; 
+    height: calc(100vh - 50px); 
+    overflow: auto;
+    position: relative;
+    /* Ensure smooth scrolling and sticky support */
+    -webkit-overflow-scrolling: touch;
+  }
   
   /* Table */
   .flextable {
@@ -32,28 +39,53 @@
     --ft-filter-top: 35px;
     /* Prevent layout shifts during rendering */
     min-height: 200px;
+    /* Enable proper sticky positioning */
+    position: relative;
   }
   .flextable th, .flextable td {
     border: 1px solid var(--ft-border); padding: 6px 8px; white-space: nowrap; vertical-align: middle;
+    max-width: 300px; overflow: hidden; text-overflow: ellipsis;
   }
   
-  /* Main header (row 1) */
+  /* Allow custom cell width overrides when columns are resized */
+  .flextable th[style*="width"], .flextable td[style*="width"] {
+    max-width: none;
+  }
+  
+  /* Main header (row 1) - Frozen/Sticky */
   .flextable thead th {
-    position: sticky; top: 0; background: var(--ft-header-bg); color: var(--ft-header-text);
-    z-index: 2; font-weight: 600; cursor: pointer; user-select: none;
+    position: -webkit-sticky !important;
+    position: sticky !important; 
+    top: 0px !important; 
+    background: var(--ft-header-bg) !important; 
+    background-color: #f7f7f7 !important;
+    color: var(--ft-header-text) !important;
+    z-index: 100 !important; 
+    font-weight: 600 !important; 
+    cursor: pointer !important; 
+    user-select: none !important;
+    border-bottom: 2px solid var(--ft-border) !important;
   }
   /* Keep explicit for clarity */
-  .flextable thead tr:first-child th { z-index: 2; }
+  .flextable thead tr:first-child th { 
+    z-index: 100 !important; 
+    position: -webkit-sticky !important;
+    position: sticky !important;
+    top: 0px !important;
+    background-color: #f7f7f7 !important;
+  }
   
   /* Filter row (row 2) — sits BELOW the main header with stable positioning */
   .flextable thead tr:nth-child(2) th {
+    position: -webkit-sticky !important;
     position: sticky !important;
     top: var(--ft-filter-top, 35px) !important;  /* override any inline top */
     background: #fff !important;
-    z-index: 3 !important;                      /* above header */
+    background-color: #ffffff !important;
+    z-index: 101 !important;                      /* above header */
     cursor: default !important;                 /* no sort cursor */
-    border-top: 1px solid var(--ft-border);
-    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    border-top: 1px solid var(--ft-border) !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08) !important;
   }
   /* Ensure controls are always clickable */
   .flextable thead tr:nth-child(2) th .ft-filter-input,
