@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>FlexTable - Advanced Tableau Dashboard Extension</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Main Styles -->
+  <link rel="stylesheet" href="src/styles/main.css">
+
+  <!-- Load Tableau Extensions API from local lib folder -->
+  <script src="lib/tableau.extensions.1.13.0.js"></script>
+
+  <!-- Main Application (ES6 Modules) -->
+  <script type="module" src="src/app.js"></script>
+</head>
+<body>
+  <!-- Main Toolbar -->
+  <div class="toolbar">
+    <h1 id="table-title">FlexTable</h1>
+
+    <!-- Worksheet Selector (hidden by default) -->
+    <select id="worksheet-selector" style="display: none;"></select>
+
+    <!-- Action Buttons -->
+    <button id="configure-btn" class="configure-btn" title="Configure measure groups">
+      Configure Groups
+    </button>
+
+    <button id="export-btn" title="Export table to CSV">
+      Export CSV
+    </button>
+
+    <button id="copy-btn" title="Copy table to clipboard">
+      Copy
+    </button>
+
+    <!-- Additional controls (optional) -->
+    <div class="toolbar-group" style="display: none;">
+      <button id="expand-all-btn" title="Expand all groups">▼</button>
+      <button id="collapse-all-btn" title="Collapse all groups">▶</button>
+    </div>
+  </div>
+
+  <!-- Table Container -->
+  <div id="table-container" class="table-container">
+    <div class="loading">Initializing FlexTable...</div>
+  </div>
+
+  <!-- Configuration Modal will be injected here by JavaScript -->
+</body>
+</html>

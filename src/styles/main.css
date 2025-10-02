@@ -1,0 +1,486 @@
+/* ============================================
+   FlexTable Main Styles
+   ============================================ */
+
+/* Reset and Base Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 13px;
+  color: #333;
+  background: #f5f5f5;
+}
+
+/* ============================================
+   Toolbar Styles
+   ============================================ */
+
+.toolbar {
+  background: white;
+  border-bottom: 1px solid #ddd;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.toolbar h1 {
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+  flex: 1;
+}
+
+.toolbar select {
+  padding: 4px 8px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  font-size: 12px;
+  background: white;
+}
+
+.toolbar button {
+  padding: 4px 12px;
+  background: #0078d4;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.toolbar button:hover {
+  background: #106ebe;
+}
+
+.configure-btn {
+  background: #6c757d;
+}
+
+.configure-btn:hover {
+  background: #5a6268;
+}
+
+/* ============================================
+   Table Container
+   ============================================ */
+
+.table-container {
+  padding: 12px;
+  height: calc(100vh - 45px);
+  overflow: auto;
+  position: relative;
+}
+
+/* ============================================
+   Table Styles
+   ============================================ */
+
+.simple-table {
+  width: 100%;
+  background: white;
+  border-collapse: collapse;
+  border: 1px solid #e0e0e0;
+}
+
+.simple-table th,
+.simple-table td {
+  padding: 8px 12px;
+  text-align: left;
+  border: 1px solid #e0e0e0;
+}
+
+.simple-table th {
+  background: #f8f8f8;
+  font-weight: 500;
+  color: #555;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  user-select: none;
+  cursor: pointer;
+}
+
+.simple-table th:hover {
+  background: #ebebeb;
+}
+
+/* Sort indicators */
+.simple-table th.sort-asc:after {
+  content: ' ▲';
+  font-size: 10px;
+  color: #999;
+}
+
+.simple-table th.sort-desc:after {
+  content: ' ▼';
+  font-size: 10px;
+  color: #999;
+}
+
+/* Row hover effects */
+.simple-table tbody tr:hover {
+  background: #f5f8fa;
+}
+
+.simple-table tbody tr:nth-child(even) {
+  background: #fafafa;
+}
+
+.simple-table tbody tr:nth-child(even):hover {
+  background: #f5f8fa;
+}
+
+/* ============================================
+   Measure Grouping Styles
+   ============================================ */
+
+.group-header {
+  background: #e8f4fd !important;
+  font-weight: 600;
+  color: #0078d4;
+  cursor: pointer;
+}
+
+.group-header:hover {
+  background: #d6eafc !important;
+}
+
+.group-header .expand-icon {
+  margin-right: 6px;
+  font-size: 10px;
+  transition: transform 0.2s;
+}
+
+.group-header.collapsed .expand-icon {
+  transform: rotate(-90deg);
+}
+
+.group-member {
+  padding-left: 24px !important;
+  background: #f9fbfd;
+  font-style: italic;
+}
+
+.group-member.hidden {
+  display: none;
+}
+
+/* ============================================
+   Pivot Table Row Grouping Styles
+   ============================================ */
+
+.pivot-level-0 {
+  background: #f1f3f4 !important;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pivot-level-0:hover {
+  background: #e8e9ea !important;
+}
+
+.pivot-level-1 {
+  background: #f8f9fa !important;
+  font-weight: 600;
+}
+
+.pivot-level-2 {
+  background: #fdfdfd;
+  color: #666;
+}
+
+.pivot-expand-icon {
+  margin-right: 6px;
+  font-size: 10px;
+  transition: transform 0.2s;
+  display: inline-block;
+  width: 12px;
+}
+
+.pivot-collapsed .pivot-expand-icon {
+  transform: rotate(-90deg);
+}
+
+.pivot-hidden {
+  display: none;
+}
+
+/* ============================================
+   Modal Styles
+   ============================================ */
+
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.5);
+  animation: fadeIn 0.3s ease;
+}
+
+.modal-content {
+  background-color: #fefefe;
+  margin: 5% auto;
+  padding: 20px;
+  border: 1px solid #888;
+  border-radius: 8px;
+  width: 600px;
+  max-width: 90%;
+  max-height: 85vh;
+  overflow-y: auto;
+  position: relative;
+  animation: slideDown 0.3s ease;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 10px;
+}
+
+.modal-header h2 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.close {
+  color: #aaa;
+  font-size: 28px;
+  font-weight: bold;
+  cursor: pointer;
+  line-height: 20px;
+}
+
+.close:hover {
+  color: #333;
+}
+
+/* Group configuration in modal */
+.group-config {
+  margin-bottom: 15px;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  max-height: 300px;
+  overflow-y: auto;
+  background: #f9f9f9;
+}
+
+.group-config h4 {
+  margin: 0 0 10px 0;
+  color: #555;
+  font-size: 14px;
+}
+
+.group-config input.group-name {
+  width: 100%;
+  padding: 8px;
+  margin: 5px 0;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  font-size: 13px;
+}
+
+.measures-list {
+  margin: 10px 0;
+}
+
+.measure-checkbox {
+  margin: 5px 0;
+  display: flex;
+  align-items: center;
+}
+
+.measure-checkbox input {
+  margin-right: 8px;
+}
+
+.measure-checkbox label {
+  font-size: 13px;
+  color: #555;
+}
+
+/* Modal buttons */
+.add-group-btn {
+  margin: 10px 0;
+  padding: 8px 16px;
+  background: #28a745;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.add-group-btn:hover {
+  background: #218838;
+}
+
+.modal-footer {
+  margin-top: 20px;
+  text-align: right;
+  padding-top: 15px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.save-btn {
+  padding: 8px 20px;
+  background: #0078d4;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  margin-right: 10px;
+  font-size: 13px;
+}
+
+.save-btn:hover {
+  background: #106ebe;
+}
+
+.cancel-btn {
+  padding: 8px 20px;
+  background: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.cancel-btn:hover {
+  background: #5a6268;
+}
+
+.remove-group-btn {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+  margin-top: 10px;
+}
+
+.remove-group-btn:hover {
+  background: #c82333;
+}
+
+/* ============================================
+   Loading and Error States
+   ============================================ */
+
+.loading {
+  padding: 40px;
+  text-align: center;
+  color: #999;
+  font-size: 14px;
+}
+
+.error {
+  padding: 20px;
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 4px;
+  color: #856404;
+  margin: 20px;
+}
+
+.error h3 {
+  margin: 0 0 10px 0;
+  font-size: 16px;
+}
+
+/* ============================================
+   Toast Notifications
+   ============================================ */
+
+.toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: #333;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 4px;
+  z-index: 10000;
+  font-size: 13px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+/* ============================================
+   Animations
+   ============================================ */
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOut {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+/* ============================================
+   Responsive Adjustments
+   ============================================ */
+
+@media (max-width: 768px) {
+  .modal-content {
+    width: 95%;
+    margin: 2% auto;
+  }
+
+  .toolbar {
+    flex-wrap: wrap;
+  }
+
+  .toolbar button {
+    font-size: 11px;
+    padding: 3px 8px;
+  }
+}

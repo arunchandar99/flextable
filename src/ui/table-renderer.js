@@ -1,7 +1,7 @@
 import { log } from "../utils/logger.js";
 
 /** Render table with click-to-sort (asc/desc toggle) */
-export function renderTable({ columns, rows }) {
+export function renderTable({ columns, rows, shelfData = null, tooltipFields = [] }) {
   const container = document.getElementById("flextable-container");
   if (!container) return;
 
@@ -19,9 +19,24 @@ export function renderTable({ columns, rows }) {
   columns.forEach((col, idx) => {
     const th = document.createElement("th");
     th.textContent = col;
-    // Add title for hover tooltip to show full text
-    if (col.length > 20) {
-      th.title = col;
+
+    // Add visual indication based on column type
+    if (shelfData && shelfData.columns) {
+      const columnInfo = shelfData.columns.find(c => c.name === col);
+      if (columnInfo) {
+        if (columnInfo.type === 'measure') {
+          th.classList.add("ft-measure-column");
+          th.title = `${col} (Measure)`;
+        } else if (columnInfo.type === 'dimension') {
+          th.classList.add("ft-dimension-column");
+          th.title = `${col} (Dimension)`;
+        }
+      }
+    } else {
+      // Fallback - add title for hover tooltip to show full text
+      if (col.length > 20) {
+        th.title = col;
+      }
     }
 
     th.addEventListener("click", () => {

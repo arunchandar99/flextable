@@ -34,38 +34,90 @@ async function ensureExtensionsApi() {
     });
   }
   
-  export async function fetchData() {
+  export async function fetchData(settings = null) {
     await ensureExtensionsApi();
     await tableau.extensions.initializeAsync();
-  
+
+    // For worksheet extensions, get data from the current worksheet
     const worksheet = tableau.extensions.worksheetContent.worksheet;
     const summary = await worksheet.getSummaryDataAsync({ ignoreSelection: true });
-  
+
+    console.log('[Tableau Service] fetchData called with settings:', settings);
+
+    // IMPORTANT: The columns in summary.columns are ALREADY in marks card order!
+    console.log('[Tableau Service] Column order from Tableau:', summary.columns.map(c => c.fieldName));
+
+    // If no settings provided (null/undefined), return all fields in marks card order
+    if (settings === null || settings === undefined) {
+      const columns = summary.columns.map(c => c.fieldName);
+      const rows = summary.data.map(row =>
+        row.map(cell => cell?.formattedValue || '')
+      );
+
+      const shelfData = {
+        measureColumns: [],
+        dimensionColumns: [],
+        details: columns.map(col => ({ name: col, type: 'unknown' })),
+        tooltips: []
+      };
+
+      return {
+        columns,
+        rows,
+        shelfData,
+        tooltipFields: []
+      };
+    }
+
+    // SIMPLE APPROACH: Just use the columns in their natural Tableau order
     const columns = summary.columns.map(c => c.fieldName);
-    const rows = summary.data.map(r => r.map(cell => cell.formattedValue));
-  
-    return { columns, rows };
+    const rows = summary.data.map(row =>
+      row.map(cell => cell?.formattedValue || '')
+    );
+
+    // Build shelf data with column types for styling
+    const shelfData = {
+      columns: summary.columns.map(col => ({
+        name: col.fieldName,
+        type: col.dataType === 'int' || col.dataType === 'float' ? 'measure' : 'dimension',
+        dataType: col.dataType
+      }))
+    };
+
+    console.log('[Tableau Service] Using direct Tableau column order:', columns);
+
+    return {
+      columns,
+      rows,
+      shelfData,
+      tooltipFields: []
+    };
   }
   
   export function getWorksheetName() {
     try {
-      const ws = tableau.extensions.worksheetContent.worksheet;
-      return ws?.name || "";
+      const worksheet = tableau.extensions.worksheetContent.worksheet;
+      return worksheet.name || "";
     } catch { return ""; }
   }
   
   export function onSummaryDataChange(handler) {
-    const worksheet = tableau.extensions.worksheetContent.worksheet;
-    worksheet.addEventListener(
-      tableau.TableauEventType.SummaryDataChanged,
-      async () => {
-        try {
-          const data = await fetchData();
-          handler(data);
-        } catch (e) {
-          console.warn("SummaryDataChanged refresh failed:", e);
+    try {
+      const worksheet = tableau.extensions.worksheetContent.worksheet;
+
+      worksheet.addEventListener(
+        tableau.TableauEventType.SummaryDataChanged,
+        async () => {
+          try {
+            const data = await fetchData();
+            handler(data);
+          } catch (e) {
+            console.warn("SummaryDataChanged refresh failed:", e);
+          }
         }
-      }
-    );
+      );
+    } catch (e) {
+      console.warn("Failed to setup data change listeners:", e);
+    }
   }
   
