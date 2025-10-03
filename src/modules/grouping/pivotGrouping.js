@@ -6,6 +6,8 @@
 export class PivotGrouping {
   constructor() {
     this.rowGroups = new Map(); // Track collapsed state of row groups
+    this.subCategoryGroups = new Map(); // Track collapsed state of sub-category groups
+    this.maxFieldsPerColumn = 5; // Limit for fields in the first column
   }
 
   /**
@@ -43,6 +45,64 @@ export class PivotGrouping {
   }
 
   /**
+   * Group rows by segment (third column)
+   */
+  groupBySegment(rowData) {
+    const segmentGroups = new Map();
+
+    rowData.forEach(({ row, rowIndex }) => {
+      const segment = row[2] || 'Other';
+      if (!segmentGroups.has(segment)) {
+        segmentGroups.set(segment, []);
+      }
+      segmentGroups.get(segment).push({ row, rowIndex });
+    });
+
+    return segmentGroups;
+  }
+
+  /**
+   * Determine how many hierarchy levels to show based on field count
+   */
+  getHierarchyLevels(data) {
+    const dimensionColumns = this.getDimensionColumns(data);
+    return Math.min(dimensionColumns.length, 3); // Max 3 levels
+  }
+
+  /**
+   * Get dimension columns (non-measure columns)
+   */
+  getDimensionColumns(data) {
+    const dimensionColumns = [];
+    for (let i = 0; i < Math.min(data.columns.length, this.maxFieldsPerColumn); i++) {
+      if (this.isDimensionColumn(data, i)) {
+        dimensionColumns.push(i);
+      }
+    }
+    return dimensionColumns;
+  }
+
+  /**
+   * Check if a column is a dimension (contains text data)
+   */
+  isDimensionColumn(data, columnIndex) {
+    if (data.rows.length === 0) return true;
+
+    // Check first few rows to determine if column contains mostly text
+    const sampleRows = data.rows.slice(0, Math.min(5, data.rows.length));
+    let textCount = 0;
+
+    sampleRows.forEach(row => {
+      const value = row[columnIndex];
+      if (value && isNaN(parseFloat(value?.replace(/[,$%]/g, '')))) {
+        textCount++;
+      }
+    });
+
+    return textCount > sampleRows.length / 2;
+  }
+
+  /**
    * Toggle category expansion
    */
   toggleCategory(category) {
@@ -56,6 +116,24 @@ export class PivotGrouping {
    */
   isCategoryCollapsed(category) {
     return this.rowGroups.get(category) !== false;
+  }
+
+  /**
+   * Toggle sub-category expansion
+   */
+  toggleSubCategory(category, subCategory) {
+    const key = `${category}|${subCategory}`;
+    const isCollapsed = this.subCategoryGroups.get(key) !== false;
+    this.subCategoryGroups.set(key, !isCollapsed);
+    return !isCollapsed; // Return new state
+  }
+
+  /**
+   * Check if sub-category is collapsed
+   */
+  isSubCategoryCollapsed(category, subCategory) {
+    const key = `${category}|${subCategory}`;
+    return this.subCategoryGroups.get(key) !== false;
   }
 
   /**
@@ -91,6 +169,7 @@ export class PivotGrouping {
    */
   clearGroups() {
     this.rowGroups.clear();
+    this.subCategoryGroups.clear();
   }
 
   /**
@@ -100,6 +179,9 @@ export class PivotGrouping {
     for (const [key] of this.rowGroups) {
       this.rowGroups.set(key, false);
     }
+    for (const [key] of this.subCategoryGroups) {
+      this.subCategoryGroups.set(key, false);
+    }
   }
 
   /**
@@ -108,6 +190,9 @@ export class PivotGrouping {
   collapseAll() {
     for (const [key] of this.rowGroups) {
       this.rowGroups.set(key, true);
+    }
+    for (const [key] of this.subCategoryGroups) {
+      this.subCategoryGroups.set(key, true);
     }
   }
 

@@ -4,9 +4,10 @@
  */
 
 export class TableRenderer {
-  constructor(measureGrouping, pivotGrouping) {
+  constructor(measureGrouping, pivotGrouping, tableFormatter) {
     this.measureGrouping = measureGrouping;
     this.pivotGrouping = pivotGrouping;
+    this.tableFormatter = tableFormatter;
     this.container = null;
   }
 
@@ -37,6 +38,11 @@ export class TableRenderer {
     // Create body with pivot structure
     this.renderBody(table, data);
 
+    // Apply table structure formatting
+    if (this.tableFormatter) {
+      this.tableFormatter.applyTableStructure(table);
+    }
+
     this.container.appendChild(table);
   }
 
@@ -48,9 +54,13 @@ export class TableRenderer {
     const firstLevelRow = document.createElement('tr');
     const secondLevelRow = document.createElement('tr');
 
+    // Determine how many dimension columns to skip based on hierarchy
+    const hierarchyLevels = this.pivotGrouping.getHierarchyLevels(data);
+    const columnsToSkip = Math.min(hierarchyLevels - 1, 2); // Skip 1 for 2-level, 2 for 3-level
+
     data.columns.forEach((col, index) => {
-      // Skip second column (sub-category) entirely
-      if (index === 1) return;
+      // Skip dimension columns based on hierarchy level
+      if (index > 0 && index <= columnsToSkip) return;
 
       const measureGroup = this.measureGrouping.findGroupByMeasure(col);
 
@@ -73,6 +83,11 @@ export class TableRenderer {
       } else {
         th1.innerHTML = '&nbsp;';
         th1.style.background = '#fff';
+      }
+
+      // Apply header formatting to first level
+      if (this.tableFormatter) {
+        this.tableFormatter.applyCellStyling(th1, true, 0, index);
       }
 
       firstLevelRow.appendChild(th1);
@@ -101,6 +116,11 @@ export class TableRenderer {
         th2.onclick = () => this.sortTable(index);
       }
 
+      // Apply header formatting
+      if (this.tableFormatter) {
+        this.tableFormatter.applyCellStyling(th2, true, 0, index);
+      }
+
       secondLevelRow.appendChild(th2);
     });
 
@@ -115,6 +135,9 @@ export class TableRenderer {
   renderBody(table, data) {
     const tbody = document.createElement('tbody');
 
+    // Determine how many hierarchy levels to show
+    const hierarchyLevels = this.pivotGrouping.getHierarchyLevels(data);
+
     // Group data by first column (category)
     const groups = this.pivotGrouping.groupRowsByCategory(data);
 
@@ -123,14 +146,26 @@ export class TableRenderer {
       const categoryRow = this.createCategoryRow(category, rowData, data);
       tbody.appendChild(categoryRow);
 
-      // Add detail rows if expanded
+      // Add sub-levels if expanded and available
       if (!this.pivotGrouping.isCategoryCollapsed(category)) {
-        const subGroups = this.pivotGrouping.groupBySubCategory(rowData);
+        if (hierarchyLevels >= 2) {
+          const subGroups = this.pivotGrouping.groupBySubCategory(rowData);
 
-        subGroups.forEach((subRows, subCategory) => {
-          const subRow = this.createSubCategoryRow(subCategory, subRows, data);
-          tbody.appendChild(subRow);
-        });
+          subGroups.forEach((subRows, subCategory) => {
+            const subRow = this.createSubCategoryRow(category, subCategory, subRows, data);
+            tbody.appendChild(subRow);
+
+            // Add segment level if expanded and available
+            if (hierarchyLevels >= 3 && !this.pivotGrouping.isSubCategoryCollapsed(category, subCategory)) {
+              const segmentGroups = this.pivotGrouping.groupBySegment(subRows);
+
+              segmentGroups.forEach((segmentRows, segment) => {
+                const segmentRow = this.createSegmentRow(segment, segmentRows, data);
+                tbody.appendChild(segmentRow);
+              });
+            }
+          });
+        }
       }
     });
 
@@ -152,9 +187,13 @@ export class TableRenderer {
       this.render(data); // Re-render
     };
 
+    // Determine how many dimension columns to skip
+    const hierarchyLevels = this.pivotGrouping.getHierarchyLevels(data);
+    const columnsToSkip = Math.min(hierarchyLevels - 1, 2);
+
     data.columns.forEach((col, cellIndex) => {
-      // Skip second column entirely
-      if (cellIndex === 1) return;
+      // Skip dimension columns based on hierarchy level
+      if (cellIndex > 0 && cellIndex <= columnsToSkip) return;
 
       const td = document.createElement('td');
       const measureGroup = this.measureGrouping.findGroupByMeasure(col);
@@ -166,18 +205,29 @@ export class TableRenderer {
       } else if (measureGroup && measureGroup.collapsed && measureGroup.measures[0] === col) {
         // Sum for collapsed measure group
         const sum = this.calculateMeasureGroupSum(rowData, measureGroup, data.columns);
-        td.textContent = sum.toLocaleString();
+        const formattedSum = this.tableFormatter ?
+          this.tableFormatter.formatNumber(sum, cellIndex, null, data.columns[cellIndex]) :
+          sum.toLocaleString();
+        td.textContent = formattedSum;
       } else if (measureGroup && measureGroup.collapsed && measureGroup.measures[0] !== col) {
         td.style.display = 'none';
       } else {
         // Regular aggregation
         const aggregates = this.pivotGrouping.calculateGroupAggregates(rowData, data.columns);
         const value = aggregates[cellIndex];
-        if (!isNaN(value) && cellIndex > 1) {
-          td.textContent = value.toLocaleString();
+        if (!isNaN(value) && cellIndex > columnsToSkip) {
+          const formattedValue = this.tableFormatter ?
+            this.tableFormatter.formatNumber(value, cellIndex, null, data.columns[cellIndex]) :
+            value.toLocaleString();
+          td.textContent = formattedValue;
         } else {
           td.textContent = '';
         }
+      }
+
+      // Apply cell formatting (but preserve pivot row styling)
+      if (this.tableFormatter && cellIndex !== 0) {
+        this.tableFormatter.applyCellStyling(td, false, 0, cellIndex);
       }
 
       tr.appendChild(td);
@@ -189,35 +239,122 @@ export class TableRenderer {
   /**
    * Create a sub-category row
    */
-  createSubCategoryRow(subCategory, subRows, data) {
+  createSubCategoryRow(category, subCategory, subRows, data) {
     const tr = document.createElement('tr');
     tr.className = 'pivot-level-1';
 
+    // Determine how many hierarchy levels we have
+    const hierarchyLevels = this.pivotGrouping.getHierarchyLevels(data);
+
+    // Add click functionality for 3-level hierarchy
+    if (hierarchyLevels >= 3) {
+      tr.style.cursor = 'pointer';
+      tr.onclick = () => {
+        this.pivotGrouping.toggleSubCategory(category, subCategory);
+        this.render(data); // Re-render
+      };
+    }
+
+    // Determine how many dimension columns to skip
+    const columnsToSkip = Math.min(hierarchyLevels - 1, 2);
+
     data.columns.forEach((col, cellIndex) => {
-      // Skip second column entirely
-      if (cellIndex === 1) return;
+      // Skip dimension columns based on hierarchy level
+      if (cellIndex > 0 && cellIndex <= columnsToSkip) return;
 
       const td = document.createElement('td');
       const measureGroup = this.measureGrouping.findGroupByMeasure(col);
 
       if (cellIndex === 0) {
         // Show sub-category indented in first column
-        td.innerHTML = `&nbsp;&nbsp;&nbsp;&nbsp;${subCategory}`;
+        if (hierarchyLevels >= 3) {
+          const isSubCollapsed = this.pivotGrouping.isSubCategoryCollapsed(category, subCategory);
+          const icon = isSubCollapsed ? '▶' : '▼';
+          td.innerHTML = `&nbsp;&nbsp;&nbsp;&nbsp;<span class="pivot-expand-icon">${icon}</span> ${subCategory}`;
+        } else {
+          td.innerHTML = `&nbsp;&nbsp;&nbsp;&nbsp;${subCategory}`;
+        }
       } else if (measureGroup && measureGroup.collapsed && measureGroup.measures[0] === col) {
         // Sum for collapsed measure group
         const sum = this.calculateMeasureGroupSum(subRows, measureGroup, data.columns);
-        td.textContent = sum.toLocaleString();
+        const formattedSum = this.tableFormatter ?
+          this.tableFormatter.formatNumber(sum, cellIndex, null, data.columns[cellIndex]) :
+          sum.toLocaleString();
+        td.textContent = formattedSum;
       } else if (measureGroup && measureGroup.collapsed && measureGroup.measures[0] !== col) {
         td.style.display = 'none';
       } else {
         // Regular aggregation
         const aggregates = this.pivotGrouping.calculateGroupAggregates(subRows, data.columns);
         const value = aggregates[cellIndex];
-        if (!isNaN(value) && cellIndex > 1) {
-          td.textContent = value.toLocaleString();
+        if (!isNaN(value) && cellIndex > columnsToSkip) {
+          const formattedValue = this.tableFormatter ?
+            this.tableFormatter.formatNumber(value, cellIndex, null, data.columns[cellIndex]) :
+            value.toLocaleString();
+          td.textContent = formattedValue;
         } else {
           td.textContent = '';
         }
+      }
+
+      // Apply cell formatting (but preserve pivot row styling)
+      if (this.tableFormatter && cellIndex !== 0) {
+        this.tableFormatter.applyCellStyling(td, false, 1, cellIndex);
+      }
+
+      tr.appendChild(td);
+    });
+
+    return tr;
+  }
+
+  /**
+   * Create a segment row (third level)
+   */
+  createSegmentRow(segment, segmentRows, data) {
+    const tr = document.createElement('tr');
+    tr.className = 'pivot-level-2';
+
+    // Determine how many dimension columns to skip
+    const hierarchyLevels = this.pivotGrouping.getHierarchyLevels(data);
+    const columnsToSkip = Math.min(hierarchyLevels - 1, 2);
+
+    data.columns.forEach((col, cellIndex) => {
+      // Skip dimension columns based on hierarchy level
+      if (cellIndex > 0 && cellIndex <= columnsToSkip) return;
+
+      const td = document.createElement('td');
+      const measureGroup = this.measureGrouping.findGroupByMeasure(col);
+
+      if (cellIndex === 0) {
+        // Show segment indented more in first column
+        td.innerHTML = `&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${segment}`;
+      } else if (measureGroup && measureGroup.collapsed && measureGroup.measures[0] === col) {
+        // Sum for collapsed measure group
+        const sum = this.calculateMeasureGroupSum(segmentRows, measureGroup, data.columns);
+        const formattedSum = this.tableFormatter ?
+          this.tableFormatter.formatNumber(sum, cellIndex, null, data.columns[cellIndex]) :
+          sum.toLocaleString();
+        td.textContent = formattedSum;
+      } else if (measureGroup && measureGroup.collapsed && measureGroup.measures[0] !== col) {
+        td.style.display = 'none';
+      } else {
+        // Regular aggregation
+        const aggregates = this.pivotGrouping.calculateGroupAggregates(segmentRows, data.columns);
+        const value = aggregates[cellIndex];
+        if (!isNaN(value) && cellIndex > columnsToSkip) {
+          const formattedValue = this.tableFormatter ?
+            this.tableFormatter.formatNumber(value, cellIndex, null, data.columns[cellIndex]) :
+            value.toLocaleString();
+          td.textContent = formattedValue;
+        } else {
+          td.textContent = '';
+        }
+      }
+
+      // Apply cell formatting (but preserve pivot row styling)
+      if (this.tableFormatter && cellIndex !== 0) {
+        this.tableFormatter.applyCellStyling(td, false, 2, cellIndex);
       }
 
       tr.appendChild(td);

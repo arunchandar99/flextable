@@ -9,6 +9,8 @@ import PivotGrouping from './modules/grouping/pivotGrouping.js';
 import ConfigModal from './modules/config/configModal.js';
 import TableRenderer from './modules/table/tableRenderer.js';
 import ExportManager from './modules/export/exportManager.js';
+import TableFormatter from './modules/formatting/tableFormatter.js';
+import FormattingModal from './modules/formatting/formattingModal.js';
 
 class FlexTableApp {
   constructor() {
@@ -16,8 +18,10 @@ class FlexTableApp {
     this.tableauAPI = new TableauAPI();
     this.measureGrouping = new MeasureGrouping();
     this.pivotGrouping = new PivotGrouping();
-    this.tableRenderer = new TableRenderer(this.measureGrouping, this.pivotGrouping);
+    this.tableFormatter = new TableFormatter();
+    this.tableRenderer = new TableRenderer(this.measureGrouping, this.pivotGrouping, this.tableFormatter);
     this.configModal = new ConfigModal(this.measureGrouping);
+    this.formattingModal = new FormattingModal(this.tableFormatter);
     this.exportManager = new ExportManager();
 
     // State
@@ -94,6 +98,14 @@ class FlexTableApp {
     if (copyBtn) {
       copyBtn.addEventListener('click', () => {
         this.exportManager.copyToClipboard();
+      });
+    }
+
+    // Format button
+    const formatBtn = document.getElementById('format-btn');
+    if (formatBtn) {
+      formatBtn.addEventListener('click', () => {
+        this.formattingModal.open(this.currentData);
       });
     }
 

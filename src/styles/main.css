@@ -177,23 +177,29 @@ body {
    ============================================ */
 
 .pivot-level-0 {
-  background: #f1f3f4 !important;
-  font-weight: 700;
   cursor: pointer;
 }
 
-.pivot-level-0:hover {
+.pivot-level-0 td {
+  background: #f1f3f4 !important;
+  color: #333 !important;
+  font-weight: 700 !important;
+}
+
+.pivot-level-0:hover td {
   background: #e8e9ea !important;
 }
 
-.pivot-level-1 {
+.pivot-level-1 td {
   background: #f8f9fa !important;
-  font-weight: 600;
+  color: #444 !important;
+  font-weight: 600 !important;
 }
 
-.pivot-level-2 {
-  background: #fdfdfd;
-  color: #666;
+.pivot-level-2 td {
+  background: #fdfdfd !important;
+  color: #666 !important;
+  font-weight: 400 !important;
 }
 
 .pivot-expand-icon {
@@ -463,6 +469,223 @@ body {
     transform: translateX(100%);
     opacity: 0;
   }
+}
+
+/* ============================================
+   Formatting Modal Styles
+   ============================================ */
+
+.formatting-modal-content {
+  width: 800px;
+  max-width: 95%;
+  max-height: 90vh;
+}
+
+.formatting-tabs {
+  display: flex;
+  border-bottom: 1px solid #ddd;
+  margin-bottom: 20px;
+}
+
+.tab-button {
+  background: none;
+  border: none;
+  padding: 10px 20px;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  font-size: 14px;
+  color: #666;
+  transition: all 0.2s;
+}
+
+.tab-button:hover {
+  background: #f5f5f5;
+  color: #333;
+}
+
+.tab-button.active {
+  color: #0078d4;
+  border-bottom-color: #0078d4;
+  background: #f8f9fa;
+}
+
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+.formatting-section {
+  background: #f9f9f9;
+  padding: 15px;
+  margin-bottom: 15px;
+  border-radius: 5px;
+  border: 1px solid #e0e0e0;
+}
+
+.formatting-section h3 {
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 16px;
+  font-weight: 600;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 8px;
+}
+
+.form-group {
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.form-group label {
+  min-width: 120px;
+  font-size: 13px;
+  color: #555;
+  font-weight: 500;
+}
+
+.form-group input,
+.form-group select {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  font-size: 13px;
+  background: white;
+}
+
+.form-group input[type="checkbox"] {
+  flex: none;
+  margin: 0 5px 0 0;
+}
+
+.form-group input[type="color"] {
+  flex: none;
+  width: 50px;
+  height: 30px;
+  border-radius: 3px;
+  border: 1px solid #ccc;
+  cursor: pointer;
+}
+
+.form-group input[type="number"] {
+  max-width: 100px;
+}
+
+.add-rule-btn {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 13px;
+  margin: 10px 0;
+}
+
+.add-rule-btn:hover {
+  background: #218838;
+}
+
+.reset-btn {
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 13px;
+  margin-left: 10px;
+}
+
+.reset-btn:hover {
+  background: #5a6268;
+}
+
+.conditional-rule {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  padding: 10px;
+  margin: 5px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rule-summary {
+  flex: 1;
+  font-size: 13px;
+  color: #555;
+}
+
+.remove-rule {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.remove-rule:hover {
+  background: #c82333;
+}
+
+.color-preview {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.formatting-preview {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  padding: 15px;
+  margin: 15px 0;
+  font-family: inherit;
+}
+
+.formatting-preview table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.formatting-preview th,
+.formatting-preview td {
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  text-align: left;
+}
+
+.formatting-preview th {
+  background: #f5f5f5;
+  font-weight: 600;
+}
+
+.format-btn {
+  background: #17a2b8;
+  color: white;
+  border: none;
+  padding: 4px 12px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.format-btn:hover {
+  background: #138496;
 }
 
 /* ============================================
